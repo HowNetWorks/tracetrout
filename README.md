@@ -32,10 +32,10 @@ $ iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 
 ### Compiling
 
-Compilation requires the `netfilter-queue-dev` package and Go 1.8 or later.
+Compilation requires the `libnetfilter-queue-dev` package and Go 1.8 or later.
 
 ```sh
-$ apt-get install netfilter-queue-dev
+$ apt-get install libnetfilter-queue-dev
 $ go build
 ```
 
