@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,6 +18,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/tcpassembly"
+	"github.com/gorilla/handlers"
 	nfq "github.com/hownetworks/nfq-go"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rs/cors"
@@ -535,7 +537,7 @@ func main() {
 	fmt.Printf("Serving on %v...\n", s.HostPort())
 	server := http.Server{
 		Addr:    s.HostPort(),
-		Handler: cors.Default().Handler(handler),
+		Handler: handlers.CombinedLoggingHandler(os.Stdout, cors.Default().Handler(handler)),
 	}
 	server.SetKeepAlivesEnabled(false)
 	server.ListenAndServe()

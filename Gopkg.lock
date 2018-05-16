@@ -12,6 +12,12 @@
   version = "v1.1.14"
 
 [[projects]]
+  name = "github.com/gorilla/handlers"
+  packages = ["."]
+  revision = "90663712d74cb411cbef281bc1e08c19d1a76145"
+  version = "v1.3.0"
+
+[[projects]]
   name = "github.com/hownetworks/nfq-go"
   packages = ["."]
   revision = "56ecb64e9664321a312156e962bc90449b14c64e"
@@ -32,6 +38,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d1a23e4ad983f97f205980972c23caaa07e8666b5def30d5361ebc7c9db3bd58"
+  inputs-digest = "9b0a902cd4110b611098a6fcdff5d7685e5a21b3a34fd4df09ea417cfa2743c0"
   solver-name = "gps-cdcl"
   solver-version = 1
