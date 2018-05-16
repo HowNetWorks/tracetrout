@@ -2,7 +2,15 @@
 
 <img src="trout.jpg">A dramatization of [a rainbot trout](https://en.wikipedia.org/wiki/File:Rainbow_trout_transparent.png) swimming against [the data stream](https://pixabay.com/en/background-bits-bit-network-blue-213649/).</img>
 
-## Prerequisites
+## Quickstart
+
+```sh
+$ docker run -ti --rm -p 8080:8080 --cap-add NET_ADMIN hownetworks/tracetrout
+```
+
+## A Less Quick Start
+
+### Prerequisites
 
 The code is designed to run on Linux. Also ensure that `iptables` and `libnetfilter-queue1` packages are installed:
 
@@ -22,7 +30,7 @@ $ iptables -A INPUT -p icmp --icmp-type time-exceeded -j NFQUEUE --queue-num 0
 $ iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 ```
 
-## Compiling
+### Compiling
 
 Compilation requires the `netfilter-queue-dev` package and Go 1.8 or later.
 
@@ -31,7 +39,7 @@ $ apt-get install netfilter-queue-dev
 $ go build
 ```
 
-## Running
+### Running
 
 To start listening on port 8080:
 
