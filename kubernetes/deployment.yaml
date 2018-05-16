@@ -14,8 +14,7 @@ spec:
     spec:
       containers:
       - name: tracetrout-server
-        image: eu.gcr.io/hownetworks-148514/tracetrout
-        imagePullPolicy: Always
+        image: hownetworks/tracetrout:latest
         env:
         - name: HOP_OFFSET
           value: "1"
