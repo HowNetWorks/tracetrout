@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tracetrout-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tracetrout-server
+  template:
+    metadata:
+      labels:
+        app: tracetrout-server
+    spec:
+      containers:
+      - name: tracetrout-server
+        image: eu.gcr.io/hownetworks-148514/tracetrout
+        imagePullPolicy: Always
+        env:
+        - name: HOP_OFFSET
+          value: "1"
+        ports:
+        - containerPort: 8080
+          name: http
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN

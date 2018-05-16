@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tracetrout-server
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app: tracetrout-server
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
