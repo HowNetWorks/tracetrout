@@ -1,6 +1,7 @@
 package main // import "github.com/hownetworks/tracetrout"
 
 import (
+	"crypto/tls"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -403,12 +404,15 @@ func (st *StreamTracker) Get(id StreamID) *Stream {
 }
 
 type settings struct {
-	Host        string
-	Port        uint16        `default:"8080"`
-	HopTimeout  time.Duration `default:"1s" split_words:"true"`
-	HopRetries  uint          `default:"5" split_words:"true"`
-	HopOffset   byte          `default:"0" split_words:"true"`
-	FilterQueue uint16        `default:"0" split_words:"true"`
+	Host          string
+	Port          uint16        `default:"8080"`
+	HopTimeout    time.Duration `default:"1s" split_words:"true"`
+	HopRetries    uint          `default:"5" split_words:"true"`
+	HopOffset     byte          `default:"0" split_words:"true"`
+	FilterQueue   uint16        `default:"0" split_words:"true"`
+	HTTPSEnabled  bool          `default:"false" envconfig:"HTTPS_ENABLED"`
+	HTTPSCertFile string        `default:"" envconfig:"HTTPS_CERT_FILE"`
+	HTTPSKeyFile  string        `default:"" envconfig:"HTTPS_KEY_FILE"`
 }
 
 func (s settings) HostPort() string {
@@ -435,6 +439,12 @@ func main() {
 	var s settings
 	if err := envconfig.Process("", &s); err != nil {
 		log.Fatal(err)
+	}
+	if s.HTTPSEnabled && (s.HTTPSCertFile == "" || s.HTTPSKeyFile == "") {
+		log.Fatal("HTTPS_ENABLED=true requires HTTPS_CERT_FILE and HTTPS_KEY_FILE")
+	}
+	if !s.HTTPSEnabled && (s.HTTPSCertFile != "" || s.HTTPSKeyFile != "") {
+		log.Fatal("HTTPS_CERT_FILE and HTTPS_KEYF_ILE require HTTPS_ENABLED=true")
 	}
 
 	tracker := NewStreamTracker()
@@ -536,11 +546,16 @@ func main() {
 
 	fmt.Printf("Serving on %v...\n", s.HostPort())
 	server := http.Server{
-		Addr:    s.HostPort(),
-		Handler: handlers.CombinedLoggingHandler(os.Stdout, cors.Default().Handler(handler)),
+		Addr:         s.HostPort(),
+		Handler:      handlers.CombinedLoggingHandler(os.Stdout, cors.Default().Handler(handler)),
+		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
 	}
 	server.SetKeepAlivesEnabled(false)
-	server.ListenAndServe()
+	if s.HTTPSEnabled {
+		log.Fatal(server.ListenAndServeTLS(s.HTTPSCertFile, s.HTTPSKeyFile))
+	} else {
+		log.Fatal(server.ListenAndServe())
+	}
 }
 
 func write(w io.Writer, s string) error {
