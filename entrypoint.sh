@@ -1,9 +1,13 @@
-iptables -A OUTPUT -p tcp --sport 8080 -j NFQUEUE --queue-num 0
-iptables -A INPUT -p tcp --dport 8080 -j NFQUEUE --queue-num 0
-iptables -A INPUT -p icmp --icmp-type time-exceeded -j NFQUEUE --queue-num 0
+set -e
 
-ip6tables -A OUTPUT -p tcp --sport 8080 -j NFQUEUE --queue-num 0
-ip6tables -A INPUT -p tcp --dport 8080 -j NFQUEUE --queue-num 0
-ip6tables -A INPUT -p icmpv6 --icmpv6-type time-exceeded -j NFQUEUE --queue-num 0
+iptables -A INPUT -t mangle -j CONNMARK --restore-mark
+iptables -A INPUT -t mangle -m mark ! --mark 0 -j ACCEPT
+iptables -A INPUT -t mangle -p tcp --dport "${PORT}" -j MARK --set-mark 0x10000
+iptables -A INPUT -t mangle -p tcp --dport "${PORT}" -j MARK --or-mark "${FILTER_QUEUE}"
+iptables -A INPUT -t mangle -j CONNMARK --save-mark
+iptables -A OUTPUT -t mangle -j CONNMARK --restore-mark
+
+iptables -A INPUT -m mark --mark 0x10000/0xffff0000 -m mark --mark "${FILTER_QUEUE}/0xffff" -j NFQUEUE --queue-num "${FILTER_QUEUE}"
+iptables -A OUTPUT -m mark --mark 0x10000/0xffff0000 -m mark --mark "${FILTER_QUEUE}/0xffff" -j NFQUEUE --queue-num "${FILTER_QUEUE}"
 
 $@

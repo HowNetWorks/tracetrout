@@ -12,5 +12,7 @@ RUN apt-get -y update \
 WORKDIR /go/src/app
 COPY entrypoint.sh .
 COPY --from=builder /tracetrout .
+ENV PORT 8080
+ENV FILTER_QUEUE 0
 ENTRYPOINT ["sh", "entrypoint.sh"]
 CMD ["./tracetrout"]
