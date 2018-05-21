@@ -72,6 +72,11 @@ func (id StreamID) String() string {
 	return net.JoinHostPort(id.remoteIP.String(), id.remotePort.String())
 }
 
+type IPLayer interface {
+	gopacket.NetworkLayer
+	gopacket.SerializableLayer
+}
+
 type Stream struct {
 	mx      sync.Mutex
 	seq     tcpassembly.Sequence
@@ -157,7 +162,7 @@ func (s *Stream) tcpReceived(src net.IP, tcp *layers.TCP) error {
 	return nil
 }
 
-func (s *Stream) tcpSent(pkt nfq.Packet, ip *layers.IPv4, tcp *layers.TCP) error {
+func (s *Stream) tcpSent(pkt nfq.Packet, ip IPLayer, tcp *layers.TCP) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 
@@ -191,7 +196,15 @@ func (s *Stream) tcpSent(pkt nfq.Packet, ip *layers.IPv4, tcp *layers.TCP) error
 
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{ComputeChecksums: true}
-	ip.TTL = claim.ttl
+
+	switch ip := ip.(type) {
+	case *layers.IPv4:
+		ip.TTL = claim.ttl
+	case *layers.IPv6:
+		ip.HopLimit = claim.ttl
+	default:
+		panic("not a IPv4/6 layer")
+	}
 	tcp.SetNetworkLayerForChecksum(ip)
 	if err := gopacket.SerializeLayers(buf, opts, ip, tcp, gopacket.Payload(tcp.Payload)); err != nil {
 		return err
@@ -309,9 +322,23 @@ func NewStreamTracker() *StreamTracker {
 }
 
 func (st *StreamTracker) HandlePacket(pkt nfq.Packet) error {
-	p := gopacket.NewPacket(pkt.Data(), layers.LayerTypeIPv4, gopacket.Lazy)
-	if ip, ok := p.NetworkLayer().(*layers.IPv4); ok && ip.Version == 4 {
-		return st.handleIPv4(pkt, p, ip)
+	data := pkt.Data()
+	if len(data) == 0 {
+		return pkt.Accept()
+	}
+
+	version := data[0] >> 4
+	if version == 4 {
+		p := gopacket.NewPacket(data, layers.LayerTypeIPv4, gopacket.Lazy)
+		if ip, ok := p.NetworkLayer().(*layers.IPv4); ok {
+			return st.handleIPv4(pkt, p, ip)
+		}
+	}
+	if version == 6 {
+		p := gopacket.NewPacket(data, layers.LayerTypeIPv6, gopacket.Lazy)
+		if ip, ok := p.NetworkLayer().(*layers.IPv6); ok {
+			return st.handleIPv6(pkt, p, ip)
+		}
 	}
 	return pkt.Accept()
 }
@@ -321,7 +348,17 @@ func (st *StreamTracker) handleIPv4(pkt nfq.Packet, p gopacket.Packet, ip *layer
 		return st.handleICMPv4(pkt, ip.SrcIP, icmp)
 	}
 	if tcp, ok := p.TransportLayer().(*layers.TCP); ok {
-		return st.handleTCP(pkt, ip, tcp)
+		return st.handleTCP(pkt, ip, ip.SrcIP, tcp)
+	}
+	return pkt.Accept()
+}
+
+func (st *StreamTracker) handleIPv6(pkt nfq.Packet, p gopacket.Packet, ip *layers.IPv6) error {
+	if icmp, ok := p.Layer(layers.LayerTypeICMPv6).(*layers.ICMPv6); ok {
+		return st.handleICMPv6(pkt, ip.SrcIP, icmp)
+	}
+	if tcp, ok := p.TransportLayer().(*layers.TCP); ok {
+		return st.handleTCP(pkt, ip, ip.SrcIP, tcp)
 	}
 	return pkt.Accept()
 }
@@ -350,7 +387,31 @@ func (st *StreamTracker) handleICMPv4(pkt nfq.Packet, srcIP net.IP, icmp *layers
 	return nil
 }
 
-func (st *StreamTracker) handleTCP(pkt nfq.Packet, ip *layers.IPv4, tcp *layers.TCP) error {
+func (st *StreamTracker) handleICMPv6(pkt nfq.Packet, srcIP net.IP, icmp *layers.ICMPv6) error {
+	defer pkt.Accept()
+
+	if icmp.TypeCode.Type() != layers.ICMPv6TypeTimeExceeded {
+		return nil
+	}
+
+	p := gopacket.NewPacket(icmp.Payload, layers.LayerTypeIPv6, gopacket.Lazy)
+	ip, ok := p.NetworkLayer().(*layers.IPv6)
+	if !ok || ip.NextHeader != layers.IPProtocolTCP || len(ip.Payload) < 8 {
+		return nil
+	}
+
+	dstPort := layers.TCPPort(binary.BigEndian.Uint16(ip.Payload[2:4]))
+	seq := binary.BigEndian.Uint32(ip.Payload[4:8])
+	id := StreamID{ip.NetworkFlow().Dst(), layers.NewTCPPortEndpoint(dstPort)}
+
+	stream := st.Get(id)
+	if stream != nil {
+		return stream.icmpReceived(srcIP, seq)
+	}
+	return nil
+}
+
+func (st *StreamTracker) handleTCP(pkt nfq.Packet, ip IPLayer, srcIP net.IP, tcp *layers.TCP) error {
 	srcID := StreamID{ip.NetworkFlow().Src(), tcp.TransportFlow().Src()}
 	dstID := StreamID{ip.NetworkFlow().Dst(), tcp.TransportFlow().Dst()}
 
@@ -382,7 +443,7 @@ func (st *StreamTracker) handleTCP(pkt nfq.Packet, ip *layers.IPv4, tcp *layers.
 	}
 
 	if src := st.Get(srcID); src != nil {
-		if err := src.tcpReceived(ip.SrcIP, tcp); err != nil {
+		if err := src.tcpReceived(srcIP, tcp); err != nil {
 			pkt.Accept()
 			return err
 		}
