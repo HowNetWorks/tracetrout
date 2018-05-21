@@ -1,15 +1,12 @@
-FROM golang:1.10 as builder
-RUN apt-get -y update \
-  && apt-get -y install libnetfilter-queue-dev
+FROM golang:1.10-alpine as builder
+RUN apk add --no-cache gcc libnetfilter_queue-dev linux-headers musl-dev
 WORKDIR /go/src/github.com/hownetworks/tracetrout
 COPY . .
-RUN go build -o /tracetrout -ldflags="-s -w"
+RUN go build -o /tracetrout -ldflags='-s -w'
 
-FROM debian:stretch-slim
-RUN apt-get -y update \
-  && apt-get -y install iptables libnetfilter-queue1 \
-  && rm -rf /var/lib/apt/lists/*
-WORKDIR /go/src/app
+FROM alpine:3.7
+RUN apk add --no-cache iptables libnetfilter_queue
+WORKDIR /tracetrout
 COPY entrypoint.sh .
 COPY --from=builder /tracetrout .
 ENV PORT 8080
