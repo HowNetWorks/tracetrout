@@ -1,6 +1,8 @@
 set -e
 
 for CMD in iptables ip6tables; do
+  command -v ${CMD} > /dev/null 2>&1 || continue
+
   "${CMD}" -A INPUT -t mangle -j CONNMARK --restore-mark
   "${CMD}" -A INPUT -t mangle -m mark ! --mark 0 -j ACCEPT
   "${CMD}" -A INPUT -t mangle -p tcp --dport "${PORT}" -j MARK --set-mark 0x10000
