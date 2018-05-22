@@ -1,6 +1,8 @@
 # TraceTrout
 
-<img src="trout.jpg">A dramatization of [a rainbot trout](https://en.wikipedia.org/wiki/File:Rainbow_trout_transparent.png) swimming against [the data stream](https://pixabay.com/en/background-bits-bit-network-blue-213649/).</img>
+TraceTrout is a HTTP(S) server that returns a reverse traceroute from the server to the client. It does this by piggybacking the established connection, modifying the outgoing TCP packets' TTL values while the server is sending the response.
+
+<img src="trout.jpg">**Figure 1:** A dramatization of [a rainbot trout](https://en.wikipedia.org/wiki/File:Rainbow_trout_transparent.png) swimming against [the data stream](https://pixabay.com/en/background-bits-bit-network-blue-213649/).</img>
 
 ## Quickstart
 
