@@ -5,7 +5,7 @@ COPY . .
 RUN go build -o /tracetrout -ldflags='-s -w'
 
 FROM alpine:3.7
-RUN apk add --no-cache iptables libnetfilter_queue
+RUN apk add --no-cache iptables ip6tables libnetfilter_queue
 WORKDIR /tracetrout
 COPY entrypoint.sh .
 COPY --from=builder /tracetrout .
