@@ -519,7 +519,12 @@ func main() {
 	}
 	defer queue.Close()
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+
 		id, err := StreamIDFromHostPort(r.RemoteAddr)
 		if err != nil {
 			log.Panic(err)
@@ -608,7 +613,7 @@ func main() {
 	fmt.Printf("Serving on %v...\n", s.HostPort())
 	server := http.Server{
 		Addr:         s.HostPort(),
-		Handler:      handlers.CombinedLoggingHandler(os.Stdout, cors.Default().Handler(handler)),
+		Handler:      handlers.CombinedLoggingHandler(os.Stdout, cors.Default().Handler(http.DefaultServeMux)),
 		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
 	}
 	server.SetKeepAlivesEnabled(false)
