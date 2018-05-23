@@ -14,4 +14,4 @@ for CMD in iptables ip6tables; do
   "${CMD}" -A OUTPUT -m mark --mark 0x10000/0xffff0000 -m mark --mark "${FILTER_QUEUE}/0xffff" -j NFQUEUE --queue-num "${FILTER_QUEUE}"
 done
 
-$@
+exec "$@"
