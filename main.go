@@ -1,4 +1,4 @@
-package main // import "github.com/hownetworks/tracetrout"
+package main
 
 import (
 	"crypto/tls"

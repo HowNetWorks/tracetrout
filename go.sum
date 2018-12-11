@@ -1,0 +1,10 @@
+github.com/google/gopacket v1.1.14 h1:1+TEhSu8Mh154ZBVjyd1Nt2Bb7cnyOeE3GQyb1WGLqI=
+github.com/google/gopacket v1.1.14/go.mod h1:UCLx9mCmAwsVbn6qQl1WIEt2SO7Nd2fD0th1TBAsqBw=
+github.com/gorilla/handlers v1.3.0 h1:tsg9qP3mjt1h4Roxp+M1paRjrVBfPSOpBuVclh6YluI=
+github.com/gorilla/handlers v1.3.0/go.mod h1:Qkdc/uu4tH4g6mTK6auzZ766c4CA0Ng8+o/OAirnOIQ=
+github.com/hownetworks/nfq-go v1.0.1 h1:I8oiNfvtDVRQsw1Fbasc/dwqFAtJ1B95lEI3KjynS8Q=
+github.com/hownetworks/nfq-go v1.0.1/go.mod h1:mClQvfA0qjMCUJD71Jm8LLrmhLXj9GqjqdKflt+vIQw=
+github.com/kelseyhightower/envconfig v1.3.0 h1:IvRS4f2VcIQy6j4ORGIf9145T/AsUB+oY8LyvN8BXNM=
+github.com/kelseyhightower/envconfig v1.3.0/go.mod h1:cccZRl6mQpaq41TPp5QxidR+Sa3axMbJDNb//FQX6Gg=
+github.com/rs/cors v1.3.0 h1:R0sy4XekGcOFoby9D76NXXg2birJ3WFkzGvXF9Kn3xE=
+github.com/rs/cors v1.3.0/go.mod h1:gFx+x8UowdsKA9AchylcLynDq+nNFfI8FkUZdN/jGCU=
