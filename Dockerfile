@@ -1,10 +1,10 @@
-FROM golang:1.10-alpine as builder
+FROM golang:1.11-alpine as builder
 RUN apk add --no-cache gcc libnetfilter_queue-dev linux-headers musl-dev
 WORKDIR /go/src/github.com/hownetworks/tracetrout
 COPY . .
 RUN go build -o /tracetrout -ldflags='-s -w'
 
-FROM alpine:3.7
+FROM alpine:3.8
 ARG IPV6_SUPPORT
 RUN apk add --no-cache iptables libnetfilter_queue ${IPV6_SUPPORT:+ip6tables}
 WORKDIR /tracetrout
