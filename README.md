@@ -1,4 +1,4 @@
-# TraceTrout
+# TraceTrout [![CircleCI](https://circleci.com/gh/HowNetWorks/tracetrout.svg?style=shield)](https://circleci.com/gh/HowNetWorks/tracetrout)
 
 TraceTrout is a HTTP(S) server that returns a reverse traceroute from the server to the client. It does this by piggybacking the established connection, modifying the outgoing TCP packets' TTL values while the server is sending the response.
 
