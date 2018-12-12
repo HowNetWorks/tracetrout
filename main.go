@@ -505,7 +505,7 @@ func main() {
 		log.Fatal("HTTPS_ENABLED=true requires HTTPS_CERT_FILE and HTTPS_KEY_FILE")
 	}
 	if !s.HTTPSEnabled && (s.HTTPSCertFile != "" || s.HTTPSKeyFile != "") {
-		log.Fatal("HTTPS_CERT_FILE and HTTPS_KEYF_ILE require HTTPS_ENABLED=true")
+		log.Fatal("HTTPS_CERT_FILE and HTTPS_KEY_FILE require HTTPS_ENABLED=true")
 	}
 
 	tracker := NewStreamTracker()
