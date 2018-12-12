@@ -1,6 +1,6 @@
-// Place your settings in this file to overwrite default and user settings.
 {
+  "go.lintTool": "golangci-lint",
+  "go.lintFlags": ["--fast"],
   "go.vetOnSave": "off",
-  "go.buildOnSave": "off",
-  "go.lintTool": "gometalinter"
+  "go.buildOnSave": "off"
 }

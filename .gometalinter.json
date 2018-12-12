@@ -1,4 +1,0 @@
-{
-  "Enable": ["vet", "golint", "gotype"],
-  "Exclude": ["exported \\S+ \\S+ should have comment or be unexported"]
-}
