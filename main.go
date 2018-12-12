@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -21,6 +22,7 @@ import (
 	"github.com/google/gopacket/tcpassembly"
 	"github.com/gorilla/handlers"
 	nfq "github.com/hownetworks/nfq-go"
+	"github.com/jtacoma/uritemplates"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rs/cors"
 )
@@ -465,15 +467,16 @@ func (st *StreamTracker) Get(id StreamID) *Stream {
 }
 
 type settings struct {
-	Host          string
-	Port          uint16        `default:"8080"`
-	HopTimeout    time.Duration `default:"1s" split_words:"true"`
-	HopRetries    uint          `default:"5" split_words:"true"`
-	HopOffset     byte          `default:"0" split_words:"true"`
-	FilterQueue   uint16        `default:"0" split_words:"true"`
-	HTTPSEnabled  bool          `default:"false" envconfig:"HTTPS_ENABLED"`
-	HTTPSCertFile string        `default:"" envconfig:"HTTPS_CERT_FILE"`
-	HTTPSKeyFile  string        `default:"" envconfig:"HTTPS_KEY_FILE"`
+	Host            string
+	Port            uint16        `default:"8080"`
+	HopTimeout      time.Duration `default:"1s" split_words:"true"`
+	HopRetries      uint          `default:"5" split_words:"true"`
+	HopOffset       byte          `default:"0" split_words:"true"`
+	FilterQueue     uint16        `default:"0" split_words:"true"`
+	HTTPSEnabled    bool          `default:"false" envconfig:"HTTPS_ENABLED"`
+	HTTPSCertFile   string        `default:"" envconfig:"HTTPS_CERT_FILE"`
+	HTTPSKeyFile    string        `default:"" envconfig:"HTTPS_KEY_FILE"`
+	InfoUriTemplate string        `default:"" split_words:"true"`
 }
 
 func (s settings) HostPort() string {
@@ -497,6 +500,8 @@ func ipFromHostPort(s string) (net.IP, error) {
 }
 
 func main() {
+	var err error
+
 	var s settings
 	if err := envconfig.Process("", &s); err != nil {
 		log.Fatal(err)
@@ -506,6 +511,37 @@ func main() {
 	}
 	if !s.HTTPSEnabled && (s.HTTPSCertFile != "" || s.HTTPSKeyFile != "") {
 		log.Fatal("HTTPS_CERT_FILE and HTTPS_KEY_FILE require HTTPS_ENABLED=true")
+	}
+
+	var infoUriTmpl *uritemplates.UriTemplate
+	if s.InfoUriTemplate != "" {
+		infoUriTmpl, err = uritemplates.Parse(s.InfoUriTemplate)
+		if err != nil {
+			log.Fatal("can't parse INFO_URI_TEMPLATE: ", err)
+		}
+	}
+	getInfo := func(ip net.IP) (interface{}, error) {
+		if infoUriTmpl == nil {
+			return nil, nil
+		}
+		url, err := infoUriTmpl.Expand(map[string]interface{}{"ip": ip})
+		if err != nil {
+			return nil, err
+		}
+		resp, err := http.Get(url)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		var result interface{}
+		err = json.Unmarshal(body, &result)
+		return result, err
 	}
 
 	tracker := NewStreamTracker()
@@ -585,7 +621,12 @@ func main() {
 			if result.Timeout {
 				obj = object{"ttl": result.TTL - s.HopOffset, "timeout": true}
 			} else {
-				obj = object{"ttl": result.TTL - s.HopOffset, "ip": result.IP}
+				info, err := getInfo(result.IP)
+				if err != nil && info != nil {
+					obj = object{"ttl": result.TTL - s.HopOffset, "ip": result.IP, "info": info}
+				} else {
+					obj = object{"ttl": result.TTL - s.HopOffset, "ip": result.IP}
+				}
 				goal = result.IP.Equal(ip)
 			}
 
