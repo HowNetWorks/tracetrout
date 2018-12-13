@@ -622,7 +622,7 @@ func main() {
 				obj = object{"ttl": result.TTL - s.HopOffset, "timeout": true}
 			} else {
 				info, err := getInfo(result.IP)
-				if err != nil && info != nil {
+				if err == nil && info != nil {
 					obj = object{"ttl": result.TTL - s.HopOffset, "ip": result.IP, "info": info}
 				} else {
 					obj = object{"ttl": result.TTL - s.HopOffset, "ip": result.IP}
