@@ -587,7 +587,6 @@ func main() {
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		writeAndFlush(w, "[")
 
 		stream := tracker.Get(id)
 		if stream == nil {
@@ -642,24 +641,15 @@ func main() {
 				goal = result.IP.Equal(ip)
 			}
 
-			if err := write(w, "\n  "); err != nil {
-				log.Panic(err)
-			}
 			if err := writeJSON(w, obj); err != nil {
 				log.Panic(err)
 			}
-			if !goal {
-				if err := writeAndFlush(w, ","); err != nil {
-					log.Panic(err)
-				}
+			if err := write(w, "\n"); err != nil {
+				log.Panic(err)
 			}
 			if goal {
 				break
 			}
-		}
-
-		if err := writeAndFlush(w, "\n]\n"); err != nil {
-			log.Panic(err)
 		}
 	})
 
