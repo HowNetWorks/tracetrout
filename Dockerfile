@@ -1,6 +1,8 @@
 FROM golang:1.11-alpine as builder
 RUN apk add --no-cache gcc libnetfilter_queue-dev linux-headers musl-dev git
 WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
 COPY . .
 RUN go build -mod=readonly -o=/tracetrout -ldflags='-s -w'
 
