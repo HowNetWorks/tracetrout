@@ -25,6 +25,8 @@ import (
 	"github.com/jtacoma/uritemplates"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rs/cors"
+	"golang.org/x/crypto/acme"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 var (
@@ -467,16 +469,19 @@ func (st *StreamTracker) Get(id StreamID) *Stream {
 }
 
 type settings struct {
-	Host            string
-	Port            uint16        `default:"8080"`
-	HopTimeout      time.Duration `default:"1s" split_words:"true"`
-	HopRetries      uint          `default:"5" split_words:"true"`
-	HopOffset       byte          `default:"0" split_words:"true"`
-	FilterQueue     uint16        `default:"0" split_words:"true"`
-	HTTPSEnabled    bool          `default:"false" envconfig:"HTTPS_ENABLED"`
-	HTTPSCertFile   string        `default:"" envconfig:"HTTPS_CERT_FILE"`
-	HTTPSKeyFile    string        `default:"" envconfig:"HTTPS_KEY_FILE"`
-	InfoUriTemplate string        `default:"" split_words:"true"`
+	Host                  string
+	Port                  uint16        `default:"8080"`
+	HopTimeout            time.Duration `default:"1s" split_words:"true"`
+	HopRetries            uint          `default:"5" split_words:"true"`
+	HopOffset             byte          `default:"0" split_words:"true"`
+	FilterQueue           uint16        `default:"0" split_words:"true"`
+	HTTPSEnabled          bool          `default:"false" envconfig:"HTTPS_ENABLED"`
+	HTTPSCertFile         string        `default:"" envconfig:"HTTPS_CERT_FILE"`
+	HTTPSKeyFile          string        `default:"" envconfig:"HTTPS_KEY_FILE"`
+	HTTPSAutocertEnabled  bool          `default:"" envconfig:"HTTPS_AUTOCERT_ENABLED"`
+	HTTPSAutocertHosts    []string      `default:"" envconfig:"HTTPS_AUTOCERT_HOSTS"`
+	HTTPSAutocertDirCache string        `default:"" envconfig:"HTTPS_AUTOCERT_DIR_CACHE"`
+	InfoUriTemplate       string        `default:"" split_words:"true"`
 }
 
 func (s settings) HostPort() string {
@@ -506,11 +511,18 @@ func main() {
 	if err := envconfig.Process("", &s); err != nil {
 		log.Fatal(err)
 	}
-	if s.HTTPSEnabled && (s.HTTPSCertFile == "" || s.HTTPSKeyFile == "") {
-		log.Fatal("HTTPS_ENABLED=true requires HTTPS_CERT_FILE and HTTPS_KEY_FILE")
+
+	httpsEnabled := s.HTTPSEnabled
+	autocertEnabled := s.HTTPSAutocertEnabled
+	certsDefined := s.HTTPSCertFile != "" && s.HTTPSKeyFile != ""
+	if httpsEnabled && !autocertEnabled && !certsDefined {
+		log.Fatal("HTTPS_ENABLED=true requires either HTTPS_CERT_FILE and HTTPS_KEY_FILE or HTTPS_AUTOCERT_ENABLED=true")
 	}
-	if !s.HTTPSEnabled && (s.HTTPSCertFile != "" || s.HTTPSKeyFile != "") {
-		log.Fatal("HTTPS_CERT_FILE and HTTPS_KEY_FILE require HTTPS_ENABLED=true")
+	if !httpsEnabled && (autocertEnabled || certsDefined) {
+		log.Fatal("HTTPS_AUTOCERT_ENABLED=true, HTTPS_CERT_FILE and HTTPS_KEY_FILE require HTTPS_ENABLED=true")
+	}
+	if autocertEnabled && certsDefined {
+		log.Fatal("HTTPS_AUTOCERT_ENABLED=true can't be defined when HTTPS_CERT_FILE and HTTPS_KEY_FILE are set")
 	}
 
 	var infoUriTmpl *uritemplates.UriTemplate
@@ -658,10 +670,34 @@ func main() {
 		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
 	}
 	server.SetKeepAlivesEnabled(false)
-	if s.HTTPSEnabled {
+
+	if !httpsEnabled {
+		log.Fatal(server.ListenAndServe())
+	} else if !autocertEnabled {
 		log.Fatal(server.ListenAndServeTLS(s.HTTPSCertFile, s.HTTPSKeyFile))
 	} else {
-		log.Fatal(server.ListenAndServe())
+		var cache autocert.Cache
+		if s.HTTPSAutocertDirCache != "" {
+			cache = autocert.DirCache(s.HTTPSAutocertDirCache)
+		}
+		var hostPolicy autocert.HostPolicy
+		if s.HTTPSAutocertHosts != nil {
+			autocert.HostWhitelist(s.HTTPSAutocertHosts...)
+		}
+		manager := &autocert.Manager{
+			Cache:      cache,
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: hostPolicy,
+		}
+		server.TLSConfig = &tls.Config{
+			GetCertificate: manager.GetCertificate,
+			NextProtos: []string{
+				"http/1.1",
+				acme.ALPNProto,
+			},
+		}
+		fmt.Println("Autocert enabled")
+		log.Fatal(server.ListenAndServeTLS("", ""))
 	}
 }
 
