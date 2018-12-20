@@ -12,6 +12,39 @@ $ docker run -ti --rm -p 8080:8080 --cap-add NET_ADMIN hownetworks/tracetrout
 
 The above Docker image doesn't support IPv6. Use the `hownetworks/tracetrout:ipv6` image if you're feeling adventurous and want to [work with Docker and IPv6](https://docs.docker.com/config/daemon/ipv6/).
 
+Here's a [Docker Compose](https://docs.docker.com/compose/) file for getting you started with the following features:
+
+ * HTTPS enabled
+ * Automatic certificates from Let's Encrypt
+ * Augmenting trace data with [hownetworks/whereabouts](https://github.com/HowNetWorks/whereabouts)
+
+```yaml
+version: "3"
+
+services:
+  tracetrout:
+    image: hownetworks/tracetrout
+    volumes:
+      - autocert-cache:/autocert-cache
+    environment:
+      INFO_URI_TEMPLATE: http://whereabouts:8080/ip/{ip}
+      HTTPS_ENABLED: "true"
+      HTTPS_AUTOCERT_ENABLED: "true"      
+      HTTPS_AUTOCERT_DIR_CACHE: /autocert-cache
+      ## Uncomment the following line to limit the automatic cert generation to the given hostname(s)
+      # HTTPS_AUTOCERT_HOSTS: tracetrout1.example.com,tracetrout2.example.com      
+    ports:
+      - "443:8080"
+    cap_add:
+      - NET_ADMIN
+
+  whereabouts:
+    image: hownetworks/whereabouts
+
+volumes:
+  autocert-cache: {}
+```
+
 ## A Less Quick Start
 
 ### Prerequisites
